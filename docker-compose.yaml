@@ -1,0 +1,53 @@
+services:
+  traefik:
+    env_file:
+      - .env
+    extends:
+      service: traefik
+      file: proxy/docker-compose.yaml
+
+  rocket-meals-directus:
+    env_file:
+      - .env
+    depends_on:
+      rocket-meals-database:
+        condition: service_healthy
+      rocket-meals-cache:
+        condition: service_started
+    extends:
+      service: rocket-meals-directus
+      file: backend/docker-compose.yaml
+
+  rocket-meals-database:
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U directus" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extends:
+      service: rocket-meals-database
+      file: backend/docker-compose.yaml
+
+  rocket-meals-database-backup:
+    env_file:
+      - .env
+    extends:
+      service: rocket-meals-database-backup
+      file: backend/docker-compose.yaml
+
+  rocket-meals-cache:
+    env_file:
+      - .env
+    extends:
+      service: rocket-meals-cache
+      file: backend/docker-compose.yaml
+    networks:
+      - directus_network
+
+networks:
+  directus_network: {}
+  traefik:
+    driver: bridge
+    name: traefik
